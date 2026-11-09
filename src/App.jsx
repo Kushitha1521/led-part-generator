@@ -333,36 +333,42 @@ const handleDecode = () => {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
-        {/* Hero Section */}
-        <section className="py-6 sm:py-8">
-          <div className="relative min-h-64 overflow-hidden rounded-2xl bg-blue-950 sm:min-h-72">
-            <img
-              src="/led-controller-banner.png"
-              alt="LED controller with illuminated light guide tubes"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
+        
+        
+{/* Responsive Hero Banner */}
+<section className="py-6 sm:py-8">
+  <div className="overflow-hidden rounded-2xl bg-blue-950">
 
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-950/95 via-blue-950/70 to-transparent" />
+    {/* Text section */}
+    <div className="flex flex-col justify-center p-5 sm:p-8 md:p-10">
+      <span className="text-xs font-semibold uppercase tracking-widest text-blue-300">
+        LED Controller
+      </span>
 
-            <div className="relative z-10 flex min-h-64 max-w-2xl flex-col justify-center p-6 sm:min-h-72 sm:p-10">
-              <span className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-blue-100">
-                <Zap size={13} />
-                LED CONTROLLER SYSTEM
-              </span>
+      <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl md:text-4xl">
+        Configure.
+        <br />
+        Generate. Decode.
+      </h2>
 
-              <h2 className="text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl">
-                Configure.
-                <br />
-                Generate. Decode.
-              </h2>
+      <p className="mt-3 max-w-xl text-sm leading-relaxed text-blue-100 sm:text-base">
+        Configure your LED controller parameters, generate part numbers,
+        and decode existing part numbers easily.
+      </p>
+    </div>
 
-              <p className="mt-4 max-w-lg text-sm leading-6 text-blue-100 sm:text-base">
-                Easily create and understand LED controller part
-                numbers with our smart configuration tool.
-              </p>
-            </div>
-          </div>
-        </section>
+    {/* Image section */}
+    <div className="w-full">
+      <img
+        src="/led-controller-banner.png"
+        alt="LED Controller"
+        className="block h-auto w-full object-cover"
+      />
+    </div>
+
+  </div>
+</section>
+
 
         {/* Page Heading */}
         <section className="pb-6">
