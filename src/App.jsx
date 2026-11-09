@@ -44,10 +44,22 @@ const parameters = [
     ],
   },
   {
-    id: "ledColor",
+    id: "led01Color",
     number: "04",
-    label: "LED Color",
-    description: "Controller LED color",
+    label: "LED01 Color",
+    description: "Select LED01 color independently",
+    options: [
+      { label: "Red", value: "R" },
+      { label: "Blue", value: "B" },
+      { label: "White", value: "W" },
+      { label: "Green", value: "G" },
+    ],
+  },
+  {
+    id: "led02Color",
+    number: "05",
+    label: "LED02 Color",
+    description: "Select LED02 color independently; unavailable with 01 guide",
     options: [
       { label: "Red", value: "R" },
       { label: "Blue", value: "B" },
@@ -57,7 +69,7 @@ const parameters = [
   },
   {
     id: "tubeSize",
-    number: "05",
+    number: "06",
     label: "Tube Size",
     description: "Tube diameter",
     options: [
@@ -67,14 +79,14 @@ const parameters = [
   },
   {
     id: "guideColor",
-    number: "06",
+    number: "07",
     label: "Light Guide Type",
-    description: "Light guide color",
+    description: "Select the light guide construction",
     options: [
-      { label: "Red", value: "R" },
-      { label: "Yellow", value: "Y" },
-      { label: "Blue", value: "B" },
-      { label: "Green", value: "G" },
+      { label: "Woven piping - Yellow", value: "Y" },
+      { label: "Woven piping - Red", value: "R" },
+      { label: "Braided Tubing", value: "B" },
+      { label: "Naked Cable", value: "N" },
     ],
   },
 ];
@@ -82,23 +94,23 @@ const parameters = [
 const lengthParameters = [
   {
     id: "ledWire",
-    number: "07",
+    number: "08",
     label: "LED Wire Length",
     description: "LED connection wire",
     digits: 3,
     defaultValue: "150",
   },
   {
-    id: "tubeLength",
-    number: "08",
-    label: "Tube Length",
-    description: "Light guide tube length",
+    id: "lightguideLength",
+    number: "09",
+    label: "Light Guide Length",
+    description: "Light guide length",
     digits: 4,
     defaultValue: "380",
   },
   {
     id: "buttonWire",
-    number: "09",
+    number: "10",
     label: "Push Button Wire Length",
     description: "Button connection wire",
     digits: 3,
@@ -110,11 +122,12 @@ const initialValues = {
   fixedPart: "USB",
   guides: "01",
   button: "R",
-  ledColor: "G",
+  led01Color: "G",
+  led02Color: "G",
   tubeSize: "2",
-  guideColor: "R",
+  guideColor: "Y",
   ledWire: "150",
-  tubeLength: "380",
+  lightguideLength: "380",
   buttonWire: "260",
 };
 
@@ -123,7 +136,13 @@ const colorNames = {
   B: "Blue",
   W: "White",
   G: "Green",
-  Y: "Yellow",
+};
+
+const guideTypeNames = {
+  Y: "Woven piping - Yellow",
+  R: "Woven piping - Red",
+  B: "Braided Tubing",
+  N: "Naked Cable",
 };
 
 const buttonNames = {
@@ -150,11 +169,12 @@ function generatePartNumber(values) {
     values.fixedPart,
     values.guides,
     values.button,
-    values.ledColor,
+    values.led01Color,
+    values.guides === "01" ? "X" : values.led02Color,
     values.tubeSize,
     values.guideColor,
     formatNumber(values.ledWire, 3),
-    formatNumber(values.tubeLength, 4),
+    formatNumber(values.lightguideLength, 4),
     buttonWire,
   ].join("");
 }
@@ -162,18 +182,14 @@ function generatePartNumber(values) {
 function decodePartNumber(partNumber) {
   const code = partNumber.trim().toUpperCase();
 
-  // Expected format:
-  // USB + 2 + 1 + 1 + 1 + 1 + 3 + 4 + 3 = 19 characters
-
-  const pattern = /^USB(01|02)(R|S|N)(R|B|W|G)(2|3)(R|Y|B|G)(\d{3})(\d{4})(\d{3})$/;
-
+  // LED02 uses X when only one guide is selected.
+  const pattern = /^USB(01|02)(R|S|N)(R|B|W|G)(R|B|W|G|X)(2|3)(Y|R|B|N)(\d{3})(\d{4})(\d{3})$/;
   const match = code.match(pattern);
 
   if (!match) {
     return {
       success: false,
-      message:
-        "Invalid part number. Please enter a valid 19-character code.",
+      message: "Invalid part number. Please enter a valid 20-character code.",
     };
   }
 
@@ -181,19 +197,33 @@ function decodePartNumber(partNumber) {
     ,
     guides,
     button,
-    ledColor,
+    led01Color,
+    led02Color,
     tubeSize,
     guideColor,
     ledWire,
-    tubeLength,
+    lightguideLength,
     buttonWire,
   ] = match;
+
+  if (guides === "01" && led02Color !== "X") {
+    return {
+      success: false,
+      message: "For 01 guide, LED02 must be set to X.",
+    };
+  }
+
+  if (guides === "02" && led02Color === "X") {
+    return {
+      success: false,
+      message: "For 02 guides, select a valid LED02 color.",
+    };
+  }
 
   if (button === "N" && buttonWire !== "000") {
     return {
       success: false,
-      message:
-        "A controller without a push button must have button wire length 000.",
+      message: "A controller without a push button must have button wire length 000.",
     };
   }
 
@@ -203,11 +233,12 @@ function decodePartNumber(partNumber) {
       fixedPart: "USB",
       guides,
       button,
-      ledColor,
+      led01Color,
+      led02Color,
       tubeSize,
       guideColor,
       ledWire,
-      tubeLength,
+      lightguideLength,
       buttonWire,
     },
     message: "Part number decoded successfully.",
@@ -231,6 +262,9 @@ const [decodedValues, setDecodedValues] = useState(null);
         ...prev,
         [id]: value,
       };
+
+      // LED01 and LED02 colors remain independent. The part number
+      // automatically uses X for LED02 when only one guide is selected.
 
       // No push button means no button wire.
       if (id === "button" && value === "N") {
@@ -282,6 +316,10 @@ const handleDecode = () => {
 };
 
   const getSelectedLabel = (parameter) => {
+    if (parameter.id === "led02Color" && values.guides === "01") {
+      return "Not applicable (X)";
+    }
+
     const selected = parameter.options.find(
       (option) => option.value === values[parameter.id]
     );
@@ -369,6 +407,33 @@ const handleDecode = () => {
   </div>
 </section>
 
+{/* Responsive product cards */}
+<section className="pb-8">
+  <div className="mb-4">
+    <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">Explore Our Components</h2>
+    <p className="mt-1 text-sm text-slate-500">Discover the components used in the LED controller.</p>
+  </div>
+
+  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    {[
+      { name: "Light Guides", image: "/images/light-guide-table.jpeg", description: "Type of Light Guides" },
+      { name: "Naked Cable", image: "/images/naked-cable.jpeg", description: "Naked cable options" },
+      { name: "Woven Piping", image: "/images/woven-piping.jpeg", description: "Woven piping options" },
+      { name: "Braided Tubing", image: "/images/braided-tubing.jpeg", description: "Protective braided tubing" },
+    ].map((card) => (
+      <article key={card.name} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+        <div className="aspect-[4/3] overflow-hidden bg-slate-100">
+          <img src={card.image} alt={card.name} className="h-full w-full object-cover" />
+        </div>
+        <div className="p-4">
+          <h3 className="font-semibold text-slate-900">{card.name}</h3>
+          <p className="mt-1 text-sm text-slate-500">{card.description}</p>
+        </div>
+      </article>
+    ))}
+  </div>
+</section>
+
 
         {/* Page Heading */}
         <section className="pb-6">
@@ -406,7 +471,7 @@ const handleDecode = () => {
               </div>
 
               <span className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
-                09 Parameters
+                10 Parameters
               </span>
             </div>
 
@@ -427,30 +492,40 @@ const handleDecode = () => {
                   <div className="relative">
                     <select
                       id={parameter.id}
-                      value={values[parameter.id]}
+                      value={parameter.id === "led02Color" && values.guides === "01" ? "X" : values[parameter.id]}
+                      disabled={parameter.id === "led02Color" && values.guides === "01"}
                       onChange={(event) =>
                         updateValue(parameter.id, event.target.value)
                       }
-                      className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                      className={`w-full appearance-none rounded-xl border px-4 py-3 pr-10 text-sm font-medium outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50 ${
+                        parameter.id === "led02Color" && values.guides === "01"
+                          ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                          : "border-slate-200 bg-slate-50 text-slate-700 focus:bg-white"
+                      }`}
                     >
-                      {parameter.options.map((option) => (
-                        <option
-                          key={option.value}
-                          value={option.value}
-                        >
-                          {option.label} ({option.value})
-                        </option>
-                      ))}
+                      {parameter.id === "led02Color" && values.guides === "01" ? (
+                        <option value="X">Not applicable (X)</option>
+                      ) : (
+                        parameter.options.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label} ({option.value})
+                          </option>
+                        ))
+                      )}
                     </select>
 
-                    <ChevronDown
-                      size={16}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
+                    {!(parameter.id === "led02Color" && values.guides === "01") && (
+                      <ChevronDown
+                        size={16}
+                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      />
+                    )}
                   </div>
 
                   <p className="mt-2 text-[11px] text-slate-400">
-                    {parameter.description}
+                    {parameter.id === "led02Color" && values.guides === "01"
+                      ? "Disabled — only one guide selected (X)"
+                      : parameter.description}
                   </p>
                 </div>
               ))}
@@ -576,7 +651,7 @@ const handleDecode = () => {
                 Configuration Summary
               </h4>
               <span className="text-xs text-slate-400">
-                9 Items
+                10 Items
               </span>
             </div>
 
@@ -634,7 +709,7 @@ const handleDecode = () => {
     </div>
 
     <span className="w-fit rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
-      19 Character Format
+      20 Character Format
     </span>
   </div>
 
@@ -643,7 +718,7 @@ const handleDecode = () => {
     <input
       type="text"
       value={decodeInput}
-      maxLength={19}
+      maxLength={20}
       onChange={(event) => {
         setDecodeInput(event.target.value.toUpperCase());
         setDecodeMessage("");
@@ -655,7 +730,7 @@ const handleDecode = () => {
           handleDecode();
         }
       }}
-      placeholder="Example: USB02NB3Y1001000261"
+      placeholder="Enter a 20-character part number"
       className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-mono text-sm uppercase outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
     />
 
@@ -736,8 +811,12 @@ const handleDecode = () => {
             value: buttonNames[decodedValues.button],
           },
           {
-            label: "LED Color",
-            value: `${colorNames[decodedValues.ledColor]} (${decodedValues.ledColor})`,
+            label: "LED01 Color",
+            value: `${colorNames[decodedValues.led01Color]} (${decodedValues.led01Color})`,
+          },
+          {
+            label: "LED02 Color",
+            value: decodedValues.led02Color === "X" ? "Not applicable (X)" : `${colorNames[decodedValues.led02Color]} (${decodedValues.led02Color})`,
           },
           {
             label: "Tube Size",
@@ -745,15 +824,15 @@ const handleDecode = () => {
           },
           {
             label: "Light Guide Type",
-            value: `${colorNames[decodedValues.guideColor]} (${decodedValues.guideColor})`,
+            value: guideTypeNames[decodedValues.guideColor],
           },
           {
             label: "LED Wire Length",
             value: `${decodedValues.ledWire} mm`,
           },
           {
-            label: "Tube Length",
-            value: `${decodedValues.tubeLength} mm`,
+            label: "Light Guide Length",
+            value: `${decodedValues.lightguideLength} mm`,
           },
           {
             label: "Push Button Wire Length",
